@@ -1,0 +1,50 @@
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - GATEWAY_PORT=8000
+      - GATEWAY_LOG_LEVEL=INFO
+      - COLLECTOR_URL=http://collector:8001
+      - DASHBOARD_URL=http://dashboard:8002
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      collector:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+
+  collector:
+    build: ./collector
+    ports:
+      - "8001:8001"
+    environment:
+      - COLLECTOR_PORT=8001
+      - COLLECTOR_LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8002:8002"
+    environment:
+      - DASHBOARD_PORT=8002
+      - DASHBOARD_LOG_LEVEL=info
+      - GATEWAY_URL=http://gateway:8000
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
